@@ -1,0 +1,9 @@
+domain.tld {
+	proxy / http://localhost:2015/posts{
+		policy round_robin
+		fail_timeout 15s
+		max_fails 4
+		health_check PATH
+		health_check_interval 30s
+	}
+}
