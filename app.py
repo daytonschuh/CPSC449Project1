@@ -62,19 +62,21 @@ def hello_world():
     return 'Hello World CPSC449!'
 
 
-@app.route('/register', methods=['POST'])
+# Fixed for reading json -- Dayton
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    email = request.form['email']
-    user_name = request.form['user_name']
+    form = request.get_json()
+    email = form['email']
+    user_name = form['user_name']
     test = User.query.filter_by(email=email).first() and User.query.filter_by(user_name=user_name).first()
     if test:
         return jsonify(message='That email or username already exists.'), 409
     else:
-        user_name = request.form['user_name']
-        first_name = request.form['first_name']
-        last_name = request.form['last_name']
-        password = request.form['password']
-        karma = request.form['karma']
+        user_name = form['user_name']
+        first_name = form['first_name']
+        last_name = form['last_name']
+        password = form['password']
+        karma = form['karma']
         create_time = get_pst_time()
         modify_time = get_pst_time()
         user = User(user_name=user_name, first_name=first_name, last_name=last_name, email=email, password=password,
@@ -85,56 +87,64 @@ def register():
         return jsonify(message='User created successfully!'), 201
 
 
+# Fixed for reading json -- Dayton
 @app.route('/update_email', methods=['PUT'])
 def update_email():
-    user_name = request.form['user_name']
+    form = request.get_json()
+    user_name = form['user_name']
     user = User.query.filter_by(user_name=user_name).first()
     if user:
-        user.email = request.form['email']
+        user.email = form['email']
         user.modify_time = get_pst_time()
         db.session.commit()
-        return jsonify(message='You updated the email!'), 202
+        return jsonify(message='Email updated successfully!'), 202
     else:
-        return jsonify('The user does not exist!'), 404
+        return jsonify(message='Failed to update email!'), 404
 
 
+# Fixed for reading json -- Dayton
 @app.route('/increment_karma', methods=['PUT'])
 def increment_karma():
-    user_name = request.form['user_name']
+    form = request.get_json()
+    user_name = form['user_name']
     user = User.query.filter_by(user_name=user_name).first()
     if user:
-        user.karma += int(request.form['karma'])
+        user.karma += int(form['karma'])
         user.modify_time = get_pst_time()
         db.session.commit()
-        return jsonify(message='Incremented karma successfully!'), 202
+        return jsonify(message='Karma incremented successfully!'), 202
     else:
-        return jsonify('Failed to increment karma!'), 404
+        return jsonify(message='Failed to increment karma!'), 404
 
 
-@app.route('/deactivate_account/<string:user_name>', methods=['DELETE'])
+# Added GET method -- Dayton
+@app.route('/deactivate_account/<string:user_name>', methods=['GET', 'DELETE'])
 def remove_account(user_name):
     user_name = User.query.filter_by(user_name=user_name).first()
     if user_name:
         db.session.delete(user_name)
         db.session.commit()
-        return jsonify(message="You deleted a user"), 202
+        return jsonify(message="User deleted successfully!"), 202
     else:
-        return jsonify(message="That user does not exist"), 404
+        return jsonify(message="Failed to delete user!"), 404
 
 
-@app.route('/create_post', methods=['POST'])
+# Fixed for reading json -- Dayton
+@app.route('/create_post', methods=['GET', 'POST'])
 def create_post():
-    user_name = request.form['user_name']
+    form = request.get_json()
+    user_name = form['user_name']
     test = User.query.filter_by(user_name=user_name).first()
     if test:
-        user_name = request.form['user_name']
-        title = request.form['title']
-        text = request.form['text']
-        community = request.form['community']
-        resource_url = request.form['resource_url']
+        post_id = form['post_id']
+        user_name = form['user_name']
+        title = form['title']
+        text = form['text']
+        community = form['community']
+        resource_url = form['resource_url']
         create_time = get_pst_time()
         modify_time = get_pst_time()
-        post = Post(user_name=user_name, title=title, text=text, community=community, resource_url=resource_url,
+        post = Post(post_id=post_id, user_name=user_name, title=title, text=text, community=community, resource_url=resource_url,
                     create_time=create_time, modify_time=modify_time)
         db.session.add(post)
         db.session.commit()
@@ -143,7 +153,7 @@ def create_post():
         return jsonify(message='Failed to create post!'), 409
 
 
-@app.route('/delete_post/<int:id>', methods=['DELETE'])
+@app.route('/delete_post/<int:id>', methods=['GET', 'DELETE'])
 def remove_post(id: int):
     post = Post.query.filter_by(post_id=id).first()
     if post:
@@ -153,27 +163,30 @@ def remove_post(id: int):
     else:
         return jsonify(message="Failed to delete post!"), 404
 
-# working
+
+# Slight edit to add a success message -- Dayton
 @app.route('/retrieve_post/<int:id>', methods=['GET'])
 def retrieve_post(id: int):
     post = Post.query.filter_by(post_id=id).first()
     if post:
-        result = post_schema.dump(post)
+        result = {'post':post_schema.dump(post), 'message':'Post retrieved successfully!'}
         return jsonify(result)
     else:
-        return jsonify(message="That post does not exist!"), 404
+        return jsonify(message="Failed to retrieve post!"), 404
 
 
-@app.route('/list_posts_comm/<string:community>', methods=['GET'])
-def list_post_comm(community: str):
-    post = Post.query.filter_by(community=community).order_by(Post.create_time.desc())
+# Fixed for project specifications -- Dayton
+@app.route('/list_posts_comm/<string:community>/<int:number>', methods=['GET'])
+def list_post_comm(community: str, number: int):
+    post = Post.query.filter_by(community=community).order_by(Post.create_time.desc()).limit(number)
     result = posts_schema.dump(post)
     return jsonify(result)
 
 
-@app.route('/list_posts/', methods=['GET'])
-def list_posts():
-    posts_list = Post.query.order_by(Post.create_time.desc())
+# Fixed for project specifications -- Dayton
+@app.route('/list_posts/<int:number>', methods=['GET'])
+def list_posts(number: int):
+    posts_list = Post.query.order_by(Post.create_time.desc()).limit(number)
     result = posts_schema.dump(posts_list)
     return jsonify(result)
 
