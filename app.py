@@ -88,7 +88,7 @@ def register():
 
 
 # Fixed for reading json -- Dayton
-@app.route('/update_email', methods=['PUT'])
+@app.route('/update_email', methods=['GET', 'PUT'])
 def update_email():
     form = request.get_json()
     user_name = form['user_name']
@@ -103,7 +103,7 @@ def update_email():
 
 
 # Fixed for reading json -- Dayton
-@app.route('/increment_karma', methods=['PUT'])
+@app.route('/increment_karma', methods=['GET', 'PUT'])
 def increment_karma():
     form = request.get_json()
     user_name = form['user_name']
@@ -115,6 +115,21 @@ def increment_karma():
         return jsonify(message='Karma incremented successfully!'), 202
     else:
         return jsonify(message='Failed to increment karma!'), 404
+
+
+# Added function -- Dayton
+@app.route('/decrement_karma', methods=['GET', 'PUT'])
+def decrement_karma():
+    form = request.get_json()
+    user_name = form['user_name']
+    user = User.query.filter_by(user_name=user_name).first()
+    if user:
+        user.karma -= int(form['karma'])
+        user.modify_time = get_pst_time()
+        db.session.commit()
+        return jsonify(message='Karma decremented successfully!'), 202
+    else:
+        return jsonify(message='Failed to decrement karma!'), 404
 
 
 # Added GET method -- Dayton
