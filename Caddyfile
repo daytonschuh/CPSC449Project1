@@ -1,11 +1,6 @@
-proxy / http://localhost:2015/posts{
-	policy round_robin
-	fail_timeout 15s
-	max_fails 4
-}
+localhost:{$PORT}
+root {$SITE_ROOT%}
 
-proxy / http://localhost:2015/accounts{
-	policy round_robin
-	fail_timeout 15s
-	max_fails 4
-}
+proxy /posts/ 0.0.0.0:5000 0.0.0.0:5001 0.0.0.0:5002
+
+proxy /accounts/ 0.0.0.0:5100 0.0.0.0:5101 0.0.0.0:5102
