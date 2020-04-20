@@ -204,102 +204,7 @@ def list_posts(number: int):
     posts_list = Post.query.order_by(Post.create_time.desc()).limit(number)
     result = posts_schema.dump(posts_list)
     return jsonify(result)
-
-
-@app.route('/upvote_post/<int:post_id>', methods=['PUT'])
-def upvote_post():
-    post_id = request.form['post_id']
-    post = Post.query.filter_by(post_id=post_id).first()
-    if post:
-        post.upvotes += int(request.form['upvotes'])
-        post.score += int(request.form['score'])
-        db.session.commit()
-        return jsonify(message='Incremented upvotes successfully!'), 202
-    else:
-        return jsonify('Failed to Increment upvotes!'), 404
-
-
-@app.route('/downvote_post/<int:post_id>', methods=['PUT'])
-def downvote_post():
-    post_id = request.form['post_id']
-    post = Post.query.filter_by(post_id=post_id).first()
-    if post:
-        post.downvotes += int(request.form['downvotes'])
-        post.score -= int(request.form['score'])
-        db.session.commit()
-        return jsonify(message='Incremented downvotes successfully!'), 202
-    else:
-        return jsonify('Failed to Increment downvotes!'), 404
-
-
-@app.route('/post_votes/<int:post_id>', methods=['GET'])
-def retrieve_post_votes(post_id: int):
-    post = Post.query.filter_by(post_id=post_id).first()
-    if post:
-        return jsonify('\nUpvotes: ' + post.upvotes + '\nDownvotes: ' + post.downvotes), 202
-    else:
-        return jsonify('Failed to display upvotes and downvotes!'), 404
-
-
-@app.route('/list_top_scoring_posts/<int:number>', methods=['GET'])
-def retrieve_top_scoring_posts(number: int):
-    post = Post.query.order_by(Post.score).limit(number)
-    return jsonify(posts_schema.dump(post))
-
-
-@app.route('/list_top_scoring_posts/<string:community>/<string:user_name>', methods=['GET'])
-def retrieve_specific_top_scoring_posts(community: str, user_name: str):
-    post = Post.query.filter_by(community=community, user_name=user_name).order_by(Post.score)
-    return jsonify(posts_schema.dump(post))
-
-
-@app.route('/send_message', methods=['POST'])
-def send_message():
-    form = request.get_json()
-    user_from = form['user_from']
-    user_to = form['user_to']
-
-    # Check if both users exist
-    check = User.query.filter_by(user_name=user_from).first() and User.query.filter_by(user_name=user_to)
-    if check:
-        msg_id = form['id']
-        timestamp = get_pst_time()
-        contents = form['contents']
-        flag = form['flag']
-        message = Message(id=msg_id, user_from=user_from, user_to=user_to, timestamp=timestamp, contents=contents,
-                          flag=flag)
-        db.session.add(message)
-        db.session.commit()
-        return jsonify(message='Message sent successfully!'), 202
-    else:
-        return jsonify('One or more users does not exist and the message was not sent.'), 404
-
-
-@app.route('/delete_message', methods=['DELETE'])
-def delete_message():
-    form = request.get_json()
-    msg_id = form['id']
-    message = Message.query.filter_by(id=msg_id).first()
-    if message:
-        db.session.delete(message)
-        db.session.commit()
-        return jsonify("Message deleted successfully!"), 202
-    else:
-        return jsonify("Failed to delete message!"), 404
-
-
-@app.route('/favorite_message', methods=['PUT'])
-def favorite_message():
-    form = request.get_json()
-    msg_id = form['id']
-    message = Message.query.filter_by(id=msg_id).first()
-    if message:
-        message.flag = not message.flag
-        return jsonify('Message status changed')
-
-    else:
-        return jsonify('Message was not found')
-
+    
     
 # database models
 class User(db.Model):
@@ -328,17 +233,6 @@ class Post(db.Model):
     create_time = Column(DateTime, default=get_pst_time())
     modify_time = Column(DateTime, default=get_pst_time())
 
-
-class Message(db.Model):
-    __tablename__ = 'tb_messages'
-    message_id = Column(Integer, primary_key=True)
-    user_from = Column(String)
-    user_to = Column(String)
-    timestamp = Column(DateTime, default=get_pst_time())
-    contents = Column(String)
-    flag = Column(Boolean)
-
-
 class UserSchema(ma.Schema):
     class Meta:
         fields = (
@@ -348,16 +242,8 @@ class UserSchema(ma.Schema):
 
 class PostSchema(ma.Schema):
     class Meta:
-        fields = ('id', 'user_name', 'title', 'text', 'community', 'resource_url', 'upvotes', 'downvotes', 'score',
-                  'create_time', 'modify_time'
+        fields = ('id', 'user_name', 'title', 'text', 'community', 'resource_url', 'create_time', 'modify_time'
                   )
-
-
-class MessageSchema(ma.Schema):
-    class Meta:
-        fields = (
-            'id', 'user_from', 'user_to', 'timestamp', 'contents', 'flag'
-        )
 
 
 user_schema = UserSchema()
@@ -365,9 +251,6 @@ users_schema = UserSchema(many=True)
 
 post_schema = PostSchema()
 posts_schema = PostSchema(many=True)
-
-message_schema = MessageSchema()
-messages_schema = MessageSchema(many=True)
 
 if __name__ == '__main__':
     app.run()
